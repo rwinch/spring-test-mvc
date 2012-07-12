@@ -17,8 +17,8 @@ package org.springframework.test.web.client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.nio.charset.Charset;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -53,7 +53,13 @@ class DefaultResponseCreator implements ResponseCreator {
 	}
 
 	public DefaultResponseCreator body(String body) {
-		this.body = body.getBytes(Charset.forName("UTF-8"));
+		try {
+			this.body = body.getBytes("UTF-8");
+		}
+		catch (UnsupportedEncodingException e) {
+			InternalError error = new InternalError("UTF-8 should be supported");
+			throw (Error) error.initCause(e);
+		}
 		return this;
 	}
 
