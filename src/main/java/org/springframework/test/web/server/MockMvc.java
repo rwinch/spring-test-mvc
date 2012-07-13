@@ -16,6 +16,8 @@
 
 package org.springframework.test.web.server;
 
+import java.io.IOException;
+
 import javax.servlet.ServletContext;
 
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -72,7 +74,7 @@ public class MockMvc {
 	public ResultActions perform(RequestBuilder requestBuilder) throws Exception {
 
 		MockHttpServletRequest request = requestBuilder.buildRequest(this.servletContext);
-		MockHttpServletResponse response = new MockHttpServletResponse();
+		MockHttpServletResponse response = new MvcMockHttpServletResponse();
 
 		this.dispatcherServlet.service(request, response);
 
@@ -96,4 +98,13 @@ public class MockMvc {
 		};
 	}
 
+	private static class MvcMockHttpServletResponse extends MockHttpServletResponse {
+
+		@Override
+		public void sendRedirect(String url) throws IOException {
+			super.sendRedirect(url);
+			setStatus(301);
+			setHeader("Location", url);
+		}
+	}
 }

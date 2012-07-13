@@ -40,7 +40,8 @@ public class RedirectTests {
 	public void testRedirect() throws Exception {
 		standaloneSetup(new PersonController()).build()
 			.perform(post("/persons").param("name", "Andy"))
-				.andExpect(status().isOk())
+				.andExpect(status().is(301))
+				.andExpect(header().string("Location", "/person/1"))
 	            .andExpect(redirectedUrl("/person/1"))
 	            .andExpect(model().size(1))
 	            .andExpect(model().attributeExists("id"))
