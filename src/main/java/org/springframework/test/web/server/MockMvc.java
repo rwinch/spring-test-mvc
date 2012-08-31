@@ -17,6 +17,7 @@
 package org.springframework.test.web.server;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
 
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -40,10 +41,13 @@ import org.springframework.util.Assert;
  * </pre>
  *
  * @author Rossen Stoyanchev
+ * @author Rob Winch
  */
 public class MockMvc {
+	private static String MVC_RESULT_ATTRIBUTE = MockMvc.class.getName().concat(".MVC_RESULT_ATTRIBUTE");
 
-	private final TestDispatcherServlet dispatcherServlet;
+	@SuppressWarnings("deprecation")
+	private final MockFilterChain filterChain;
 
 	private final ServletContext servletContext;
 
@@ -51,10 +55,13 @@ public class MockMvc {
 	 * Protected constructor not for direct instantiation.
 	 * @see org.springframework.test.web.server.setup.MockMvcBuilders
 	 */
-	protected MockMvc(TestDispatcherServlet dispatcherServlet) {
-		this.dispatcherServlet = dispatcherServlet;
-		this.servletContext = this.dispatcherServlet.getServletContext();
-		Assert.notNull(this.servletContext, "A ServletContext is required");
+	@SuppressWarnings("deprecation")
+	protected MockMvc(MockFilterChain filterChain, ServletContext servletContext) {
+		Assert.notNull(servletContext, "A ServletContext is required");
+		Assert.notNull(filterChain, "A MockFilterChain is required");
+
+		this.filterChain = filterChain;
+		this.servletContext = servletContext;
 	}
 
 	/**
@@ -69,14 +76,16 @@ public class MockMvc {
 	 * @see org.springframework.test.web.server.request.MockMvcRequestBuilders
 	 * @see org.springframework.test.web.server.result.MockMvcResultMatchers
 	 */
+	@SuppressWarnings("deprecation")
 	public ResultActions perform(RequestBuilder requestBuilder) throws Exception {
 
 		MockHttpServletRequest request = requestBuilder.buildRequest(this.servletContext);
 		MockHttpServletResponse response = new MockHttpServletResponse();
+		request.setAttribute(MVC_RESULT_ATTRIBUTE, new DefaultMvcResult(request, response));
 
-		this.dispatcherServlet.service(request, response);
+		this.filterChain.doFilter(request, response);
 
-		final MvcResult result = this.dispatcherServlet.getMvcResult(request);
+		final MvcResult result = getMvcResult(request);
 
 		return new ResultActions() {
 
@@ -96,4 +105,10 @@ public class MockMvc {
 		};
 	}
 
+	/**
+	 * Return the MvcResult stored in the given request.
+	 */
+	static DefaultMvcResult getMvcResult(ServletRequest request) {
+		return (DefaultMvcResult) request.getAttribute(MVC_RESULT_ATTRIBUTE);
+	}
 }
