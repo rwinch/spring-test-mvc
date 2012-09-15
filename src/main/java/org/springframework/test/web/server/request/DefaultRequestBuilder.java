@@ -34,6 +34,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.server.MergeableRequestBuilder;
 import org.springframework.test.web.server.RequestBuilder;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
@@ -48,13 +49,11 @@ import org.springframework.web.util.UriComponentsBuilder;
  * @author Rossen Stoyanchev
  * @author Arjen Poutsma
  */
-public class DefaultRequestBuilder implements RequestBuilder {
+public class DefaultRequestBuilder implements MergeableRequestBuilder {
 
 	private final UriComponentsBuilder uriComponentsBuilder;
 
 	private final HttpMethod method;
-
-	private final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
 
 	private final MultiValueMap<String, Object> headers = new LinkedMultiValueMap<String, Object>();
 
@@ -62,25 +61,27 @@ public class DefaultRequestBuilder implements RequestBuilder {
 
 	private byte[] content;
 
+	private final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
+
 	private final List<Cookie> cookies = new ArrayList<Cookie>();
 
 	private Locale locale;
 
 	private String characterEncoding;
 
-	private final Map<String, Object> attributes = new LinkedHashMap<String, Object>();
+	private Principal principal;
 
-	private final Map<String, Object> sessionAttributes = new LinkedHashMap<String, Object>();
+	private Boolean secure;
+
+	private final Map<String, Object> attributes = new LinkedHashMap<String, Object>();
 
 	private MockHttpSession session;
 
-	private Principal principal;
+	private final Map<String, Object> sessionAttributes = new LinkedHashMap<String, Object>();
 
 	private String contextPath = "";
 
 	private String servletPath = "";
-
-	private boolean secure = false;
 
 
 	/**
@@ -234,6 +235,79 @@ public class DefaultRequestBuilder implements RequestBuilder {
 		return this;
 	}
 
+	public void merge(RequestBuilder parent) {
+		if (parent == null) {
+			return;
+		}
+		if (!(parent instanceof DefaultRequestBuilder)) {
+			throw new IllegalArgumentException("Cannot merge with object of type [" + parent.getClass() + "]");
+		}
+
+		DefaultRequestBuilder other = (DefaultRequestBuilder) parent;
+
+		for (String headerName : other.headers.keySet()) {
+			if (!this.headers.containsKey(headerName)) {
+				this.headers.put(headerName, other.headers.get(headerName));
+			}
+		}
+
+		if (this.contentType == null) {
+			this.contentType = other.contentType;
+		}
+
+		if (this.content == null) {
+			this.content = other.content;
+		}
+
+		for (String paramName : other.parameters.keySet()) {
+			if (!this.parameters.containsKey(paramName)) {
+				this.parameters.put(paramName, other.parameters.get(paramName));
+			}
+		}
+
+		this.cookies.addAll(other.cookies);
+
+		if (this.locale == null) {
+			this.locale = other.locale;
+		}
+
+		if (this.characterEncoding == null) {
+			this.characterEncoding = other.characterEncoding;
+		}
+
+		if (this.principal == null) {
+			this.principal = other.principal;
+		}
+
+		if (this.secure == null) {
+			this.secure = other.secure;
+		}
+
+		for (String attributeName : other.attributes.keySet()) {
+			if (!this.attributes.containsKey(attributeName)) {
+				this.attributes.put(attributeName, other.attributes.get(attributeName));
+			}
+		}
+
+		if (this.session == null) {
+			this.session = other.session;
+		}
+
+		for (String sessionAttributeName : other.sessionAttributes.keySet()) {
+			if (!this.sessionAttributes.containsKey(sessionAttributeName)) {
+				this.sessionAttributes.put(sessionAttributeName, other.sessionAttributes.get(sessionAttributeName));
+			}
+		}
+
+		if (!StringUtils.hasText(this.contextPath)) {
+			this.contextPath = other.contextPath;
+		}
+
+		if (!StringUtils.hasText(this.servletPath)) {
+			this.servletPath = other.servletPath;
+		}
+	}
+
 	public MockHttpServletRequest buildRequest(ServletContext servletContext) {
 
 		MockHttpServletRequest request = createServletRequest(servletContext);
@@ -285,6 +359,23 @@ public class DefaultRequestBuilder implements RequestBuilder {
 			}
 		}
 
+		request.setContentType(this.contentType);
+		request.setContent(this.content);
+
+		request.setCookies(this.cookies.toArray(new Cookie[this.cookies.size()]));
+
+		if (this.locale != null) {
+			request.addPreferredLocale(this.locale);
+		}
+
+		request.setCharacterEncoding(this.characterEncoding);
+
+		request.setUserPrincipal(this.principal);
+
+		if (this.secure != null) {
+			request.setSecure(this.secure);
+		}
+
 		for (String name : this.attributes.keySet()) {
 			request.setAttribute(name, this.attributes.get(name));
 		}
@@ -299,16 +390,6 @@ public class DefaultRequestBuilder implements RequestBuilder {
 			request.getSession().setAttribute(name, this.sessionAttributes.get(name));
 		}
 
-		request.setContentType(this.contentType);
-		request.setContent(this.content);
-		request.setCookies(this.cookies.toArray(new Cookie[this.cookies.size()]));
-		request.setCharacterEncoding(this.characterEncoding);
-		request.setUserPrincipal(this.principal);
-		request.setSecure(this.secure);
-
-		if (this.locale != null) {
-			request.addPreferredLocale(this.locale);
-		}
 
 		return request;
 	}

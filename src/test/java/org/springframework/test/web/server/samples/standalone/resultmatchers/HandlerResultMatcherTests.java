@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.server.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.server.result.MockMvcResultMatchers.handler;
+import static org.springframework.test.web.server.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.server.setup.MockMvcBuilders.standaloneSetup;
 
 import java.lang.reflect.Method;
@@ -46,6 +47,7 @@ public class HandlerResultMatcherTests {
 	@Before
 	public void setup() {
 		this.mockMvc = standaloneSetup(new SimpleController()).build();
+		this.mockMvc.alwaysPerform(get("/")).andAlwaysExpect(status().isOk());
 	}
 
 	@Test

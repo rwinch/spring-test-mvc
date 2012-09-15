@@ -66,15 +66,19 @@ public class XmlContentResultMatcherTests {
 
 	private MockMvc mockMvc;
 
+
 	@Before
 	public void setup() {
 		this.mockMvc = standaloneSetup(new MusicController()).build();
+
+		this.mockMvc.alwaysPerform(get("/").accept(MediaType.APPLICATION_XML))
+			.andAlwaysExpect(status().isOk())
+			.andAlwaysExpect(content().mimeType(MediaType.APPLICATION_XML));
 	}
 
 	@Test
 	public void testXmlEqualTo() throws Exception {
-		this.mockMvc.perform(get("/music/people").accept(MediaType.APPLICATION_XML))
-			.andExpect(content().xml(PEOPLE_XML));
+		this.mockMvc.perform(get("/music/people")).andExpect(content().xml(PEOPLE_XML));
 	}
 
 	@Test
@@ -83,7 +87,7 @@ public class XmlContentResultMatcherTests {
 		SimpleNamespaceContext nsContext = new SimpleNamespaceContext();
 		nsContext.setBindings(NAMESPACES);
 
-		this.mockMvc.perform(get("/music/people").accept(MediaType.APPLICATION_XML))
+		this.mockMvc.perform(get("/music/people"))
 			.andExpect(content().node(hasXPath("/ns:people/composers/composer[1]", nsContext)));
 	}
 

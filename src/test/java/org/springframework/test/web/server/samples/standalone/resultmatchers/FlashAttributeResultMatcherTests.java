@@ -20,8 +20,10 @@ import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.server.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.server.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.server.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.server.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.server.setup.MockMvcBuilders.standaloneSetup;
 
 import java.net.URL;
@@ -43,9 +45,14 @@ public class FlashAttributeResultMatcherTests {
 
 	private MockMvc mockMvc;
 
+
 	@Before
 	public void setup() {
 		this.mockMvc = standaloneSetup(new PersonController()).build();
+
+		this.mockMvc.alwaysPerform(get("/"))
+			.andAlwaysExpect(status().isOk())
+			.andAlwaysExpect(flash().attributeCount(3));
 	}
 
 	@Test
@@ -55,21 +62,12 @@ public class FlashAttributeResultMatcherTests {
 	}
 
 	@Test
-	public void testCount() throws Exception {
-		this.mockMvc.perform(post("/persons"))
-            .andExpect(flash().attributeCount(3));
-	}
-
-	@Test
 	public void testEqualTo() throws Exception {
 		this.mockMvc.perform(post("/persons"))
             .andExpect(flash().attribute("one", "1"))
             .andExpect(flash().attribute("two", 2.222))
-            .andExpect(flash().attribute("three", new URL("http://example.com")));
-
-		// Hamcrest matchers...
-		this.mockMvc.perform(post("/persons"))
-	        .andExpect(flash().attribute("one", equalTo("1")))
+            .andExpect(flash().attribute("three", new URL("http://example.com")))
+	        .andExpect(flash().attribute("one", equalTo("1")))	// Hamcrest...
 	        .andExpect(flash().attribute("two", equalTo(2.222)))
 	        .andExpect(flash().attribute("three", equalTo(new URL("http://example.com"))));
 	}

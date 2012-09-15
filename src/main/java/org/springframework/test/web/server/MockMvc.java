@@ -16,10 +16,10 @@
 
 package org.springframework.test.web.server;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -53,6 +53,11 @@ public class MockMvc {
 
 	private final ServletContext servletContext;
 
+	private RequestBuilder defaultRequest;
+
+	private final List<Object> defaultResultActions = new ArrayList<Object>();
+
+
 	/**
 	 * Protected constructor not for direct instantiation.
 	 * @see org.springframework.test.web.server.setup.MockMvcBuilders
@@ -66,6 +71,53 @@ public class MockMvc {
 	}
 
 	/**
+	 * Rather than performing a request, this method merely stores the provided
+	 * {@code RequestBuilder} and merges it into the {@code RequestBuilder} of
+	 * every subsequent request performed by this {@code MockMvc} instance. This
+	 * provides a mechanism for applying common initialization to all requests
+	 * (e.g. frequently used request headers, session attributes, etc).
+	 *
+	 * <p>Initialization applied when performing a request overrides the request
+	 * properties specified here. This does not apply to the URI or HTTP method
+	 * since a URI and an HTTP method are always required to perform a request.
+	 * Therefore the URI and the HTTP method used here are not important.
+	 *
+	 * <p>The return value from this method can be used to define expectations on
+	 * the result of every performed request. This provides a mechanism for
+	 * applying common response actions to every response. Response actions
+	 * specified here are executed before per-request result actions.
+	 * Therefore per-request expectations cannot override global ones.
+	 *
+	 * <p>Example:
+	 *
+	 * <pre>
+	 * // Assuming static import of MockMvcResultMatchers.*
+	 *
+	 * mockMvc.alwaysPerform(get(&quot;/&quot;).accept(MediaType.APPLICATION_JSON))
+	 * 		.andAlwaysExpect(status.isOk())
+	 * 		.andAlwaysExpect(content().mimeType(MediaType.APPLICATION_JSON));
+	 * </pre>
+	 */
+	public ExpectedResultActions alwaysPerform(RequestBuilder defaultRequestBuilder) {
+
+		this.defaultRequest = defaultRequestBuilder;
+		this.defaultResultActions.clear();
+
+		return new ExpectedResultActions() {
+
+			public ExpectedResultActions andAlwaysExpect(ResultMatcher matcher) {
+				MockMvc.this.defaultResultActions.add(matcher);
+				return this;
+			}
+
+			public ExpectedResultActions andAlwaysDo(ResultHandler handler) {
+				MockMvc.this.defaultResultActions.add(handler);
+				return this;
+			}
+		};
+	}
+
+	/**
 	 * Execute a request and return a {@link ResultActions} instance that wraps
 	 * the results and enables further actions such as setting up expectations.
 	 *
@@ -73,11 +125,16 @@ public class MockMvc {
 	 * see static factory methods in
 	 * {@link org.springframework.test.web.server.request.MockMvcRequestBuilders}
 	 * @return A ResultActions instance; never {@code null}
-	 * @throws Exception any exception not handled by a HandlerExceptionResolver occurs
 	 * @see org.springframework.test.web.server.request.MockMvcRequestBuilders
 	 * @see org.springframework.test.web.server.result.MockMvcResultMatchers
 	 */
-	public ResultActions perform(RequestBuilder requestBuilder) throws IOException, ServletException {
+	public ResultActions perform(RequestBuilder requestBuilder) throws Exception {
+
+		if (this.defaultRequest != null) {
+			if (requestBuilder instanceof MergeableRequestBuilder) {
+				((MergeableRequestBuilder) requestBuilder).merge(this.defaultRequest);
+			}
+		}
 
 		MockHttpServletRequest request = requestBuilder.buildRequest(this.servletContext);
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -87,6 +144,8 @@ public class MockMvc {
 
 		this.filterChain.reset();
 		this.filterChain.doFilter(request, response);
+
+		applyDefaultResultActions(mvcResult);
 
 		return new ResultActions() {
 
@@ -104,6 +163,22 @@ public class MockMvc {
 				return mvcResult;
 			}
 		};
+	}
+
+	private void applyDefaultResultActions(MvcResult mvcResult) throws Exception {
+
+		for (Object action : this.defaultResultActions) {
+			if (action instanceof ResultMatcher) {
+				((ResultMatcher) action).match(mvcResult);
+			}
+			else if (action instanceof ResultHandler) {
+				((ResultHandler) action).handle(mvcResult);
+			}
+			else {
+				// should never happen..
+				throw new InternalError("Unexpected result action type: " + action.getClass().getName());
+			}
+		}
 	}
 
 }
