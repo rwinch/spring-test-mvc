@@ -45,21 +45,20 @@ public class SessionAttributeResultMatcherTests {
 
 	@Before
 	public void setup() {
-		this.mockMvc = standaloneSetup(new SimpleController()).build();
-		this.mockMvc.alwaysPerform(get("/")).andAlwaysExpect(status().isOk());
+		this.mockMvc = standaloneSetup(new SimpleController()).alwaysPerform(get("/")).andAlwaysExpect(status().isOk()).build();
 	}
 
 	@Test
 	public void testSessionAttributeEqualTo() throws Exception {
 		this.mockMvc.perform(get("/"))
-            .andExpect(request().sessionAttribute("locale", Locale.UK))
-	        .andExpect(request().sessionAttribute("locale", equalTo(Locale.UK)));
+			.andExpect(request().sessionAttribute("locale", Locale.UK))
+			.andExpect(request().sessionAttribute("locale", equalTo(Locale.UK)));
 	}
 
 	@Test
 	public void testSessionAttributeMatcher() throws Exception {
 		this.mockMvc.perform(get("/"))
-	        .andExpect(request().sessionAttribute("locale", notNullValue()));
+			.andExpect(request().sessionAttribute("locale", notNullValue()));
 	}
 
 

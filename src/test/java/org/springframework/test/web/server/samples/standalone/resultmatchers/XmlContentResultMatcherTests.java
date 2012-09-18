@@ -69,11 +69,9 @@ public class XmlContentResultMatcherTests {
 
 	@Before
 	public void setup() {
-		this.mockMvc = standaloneSetup(new MusicController()).build();
-
-		this.mockMvc.alwaysPerform(get("/").accept(MediaType.APPLICATION_XML))
+		this.mockMvc = standaloneSetup(new MusicController()).alwaysPerform(get("/").accept(MediaType.APPLICATION_XML))
 			.andAlwaysExpect(status().isOk())
-			.andAlwaysExpect(content().mimeType(MediaType.APPLICATION_XML));
+			.andAlwaysExpect(content().mimeType(MediaType.APPLICATION_XML)).build();
 	}
 
 	@Test

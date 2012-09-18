@@ -57,11 +57,9 @@ public class JsonPathResultMatcherTests {
 
 	@Before
 	public void setup() {
-		this.mockMvc = standaloneSetup(new MusicController()).build();
-
-		this.mockMvc.alwaysPerform(get("/").accept(MediaType.APPLICATION_JSON))
+		this.mockMvc = standaloneSetup(new MusicController()).alwaysPerform(get("/").accept(MediaType.APPLICATION_JSON))
 			.andAlwaysExpect(status().isOk())
-			.andAlwaysExpect(content().mimeType("application/json;charset=UTF-8"));
+			.andAlwaysExpect(content().mimeType("application/json;charset=UTF-8")).build();
 	}
 
 	@Test

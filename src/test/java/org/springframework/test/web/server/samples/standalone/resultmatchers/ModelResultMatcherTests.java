@@ -52,8 +52,7 @@ public class ModelResultMatcherTests {
 
 	@Before
 	public void setup() {
-		this.mockMvc = standaloneSetup(new SampleController("a string value", 3, new Person("a name"))).build();
-		this.mockMvc.alwaysPerform(get("/")).andAlwaysExpect(status().isOk());
+		this.mockMvc = standaloneSetup(new SampleController("a string value", 3, new Person("a name"))).alwaysPerform(get("/")).andAlwaysExpect(status().isOk()).build();
 	}
 
 	@Test

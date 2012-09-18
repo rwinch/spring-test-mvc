@@ -51,10 +51,9 @@ public class CookieResultMatcherTests {
 		this.mockMvc = standaloneSetup(new SimpleController())
 				.addInterceptors(new LocaleChangeInterceptor())
 				.setLocaleResolver(localeResolver)
+				.alwaysPerform(get("/").param("locale", "en_US"))
+			.andAlwaysExpect(status().isOk())
 				.build();
-
-		this.mockMvc.alwaysPerform(get("/").param("locale", "en_US"))
-			.andAlwaysExpect(status().isOk());
 	}
 
 	@Test

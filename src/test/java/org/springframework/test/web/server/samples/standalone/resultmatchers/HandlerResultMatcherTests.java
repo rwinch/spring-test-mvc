@@ -46,8 +46,7 @@ public class HandlerResultMatcherTests {
 
 	@Before
 	public void setup() {
-		this.mockMvc = standaloneSetup(new SimpleController()).build();
-		this.mockMvc.alwaysPerform(get("/")).andAlwaysExpect(status().isOk());
+		this.mockMvc = standaloneSetup(new SimpleController()).alwaysPerform(get("/")).andAlwaysExpect(status().isOk()).build();
 	}
 
 	@Test

@@ -26,8 +26,12 @@ import javax.servlet.ServletException;
 
 import org.springframework.core.NestedRuntimeException;
 import org.springframework.mock.web.MockServletConfig;
+import org.springframework.test.web.server.ExpectedResultActions;
 import org.springframework.test.web.server.MockFilterChain;
 import org.springframework.test.web.server.MockMvc;
+import org.springframework.test.web.server.RequestBuilder;
+import org.springframework.test.web.server.ResultHandler;
+import org.springframework.test.web.server.ResultMatcher;
 import org.springframework.test.web.server.TestDispatcherServlet;
 import org.springframework.util.Assert;
 import org.springframework.web.context.WebApplicationContext;
@@ -44,6 +48,12 @@ import org.springframework.web.context.WebApplicationContext;
 public abstract class AbstractMockMvcBuilder implements MockMvcBuilder {
 
 	private List<Filter> filters = new ArrayList<Filter>();
+
+	private RequestBuilder defaultRequest;
+
+	private final List<ResultMatcher> defaultResultMatchers = new ArrayList<ResultMatcher>();
+
+	private final List<ResultHandler> defaultResultHandlers = new ArrayList<ResultHandler>();
 
 	/**
 	 * Build a {@link MockMvc} instance.
@@ -65,7 +75,31 @@ public abstract class AbstractMockMvcBuilder implements MockMvcBuilder {
 
 		Filter[] filterArray = filters.toArray(new Filter[filters.size()]);
 		MockFilterChain mockMvcFilterChain = new MockFilterChain(dispatcherServlet, filterArray) {};
-		return new MockMvc(mockMvcFilterChain, dispatcherServlet.getServletContext()) {};
+		return new MockMvc(mockMvcFilterChain, dispatcherServlet.getServletContext()) {{
+			this.alwaysPerform(defaultRequest);
+			for (ResultMatcher matcher : defaultResultMatchers) {
+				andAlwaysExpect(matcher);
+			}
+			for (ResultHandler handler : defaultResultHandlers) {
+				andAlwaysDo(handler);
+			}
+		}};
+	}
+
+
+	public final <T extends AbstractMockMvcBuilder> T alwaysPerform(RequestBuilder defaultRequestBuilder) {
+		this.defaultRequest = defaultRequestBuilder;
+		return (T)this;
+	}
+
+	public final <T extends AbstractMockMvcBuilder> T andAlwaysExpect(ResultMatcher matcher) {
+		defaultResultMatchers.add(matcher);
+		return (T) this;
+	}
+
+	public final <T extends AbstractMockMvcBuilder> T andAlwaysDo(ResultHandler handler) {
+		this.defaultResultHandlers.add(handler);
+		return (T) this;
 	}
 
 	/**

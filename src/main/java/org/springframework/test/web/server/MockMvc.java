@@ -55,8 +55,9 @@ public class MockMvc {
 
 	private RequestBuilder defaultRequest;
 
-	private final List<Object> defaultResultActions = new ArrayList<Object>();
+	private final List<ResultMatcher> defaultResultMatchers = new ArrayList<ResultMatcher>();
 
+	private final List<ResultHandler> defaultResultHandlers = new ArrayList<ResultHandler>();
 
 	/**
 	 * Protected constructor not for direct instantiation.
@@ -98,23 +99,19 @@ public class MockMvc {
 	 * 		.andAlwaysExpect(content().mimeType(MediaType.APPLICATION_JSON));
 	 * </pre>
 	 */
-	public ExpectedResultActions alwaysPerform(RequestBuilder defaultRequestBuilder) {
-
+	protected MockMvc alwaysPerform(RequestBuilder defaultRequestBuilder) {
 		this.defaultRequest = defaultRequestBuilder;
-		this.defaultResultActions.clear();
+		return this;
+	}
 
-		return new ExpectedResultActions() {
+	protected MockMvc andAlwaysExpect(ResultMatcher matcher) {
+		defaultResultMatchers.add(matcher);
+		return this;
+	}
 
-			public ExpectedResultActions andAlwaysExpect(ResultMatcher matcher) {
-				MockMvc.this.defaultResultActions.add(matcher);
-				return this;
-			}
-
-			public ExpectedResultActions andAlwaysDo(ResultHandler handler) {
-				MockMvc.this.defaultResultActions.add(handler);
-				return this;
-			}
-		};
+	protected MockMvc andAlwaysDo(ResultHandler handler) {
+		this.defaultResultHandlers.add(handler);
+		return this;
 	}
 
 	/**
@@ -166,18 +163,11 @@ public class MockMvc {
 	}
 
 	private void applyDefaultResultActions(MvcResult mvcResult) throws Exception {
-
-		for (Object action : this.defaultResultActions) {
-			if (action instanceof ResultMatcher) {
-				((ResultMatcher) action).match(mvcResult);
-			}
-			else if (action instanceof ResultHandler) {
-				((ResultHandler) action).handle(mvcResult);
-			}
-			else {
-				// should never happen..
-				throw new InternalError("Unexpected result action type: " + action.getClass().getName());
-			}
+		for (ResultMatcher matcher : defaultResultMatchers) {
+			matcher.match(mvcResult);
+		}
+		for (ResultHandler handler : defaultResultHandlers) {
+			handler.handle(mvcResult);
 		}
 	}
 
